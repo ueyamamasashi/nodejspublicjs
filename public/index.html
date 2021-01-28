@@ -1,0 +1,132 @@
+<!-- <html>
+  <body>
+    <form action="" method="post" enctype="multipart/form-data" name="form">
+      <input type="file" name="image" id="inp">
+      <input type="submit" value="Upload" id="submit">
+
+    </form>
+  </body>
+</html>
+<script type="text/javascript">
+  // const submit = document.getElementById('submit');
+  // submit.addEventListener('click', (e)=>{
+  //   submit.style.backgroundColor = 'red';
+  // }, false)
+</script> -->
+
+<!-- https://o2dpd92hf6.execute-api.ap-northeast-1.amazonaws.com/test1 -->
+
+<!--
+Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+PDX-License-Identifier: MIT-0 (For details, see https://github.com/awsdocs/amazon-rekognition-developer-guide/blob/master/LICENSE-SAMPLECODE.)
+-->
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="./amazon-cognito-identity-js-master/dist/aws-cognito-sdk.min.js"></script>
+  <script src="https://www.jsdelivr.com/package/npm/amazon-cognito-identity-js"></script>
+  <script src="https://sdk.amazonaws.com/js/aws-sdk-2.16.0.min.js"></script>
+  <!-- <script src="./app.js"></script> -->
+  <meta charset="UTF-8">
+  <title>Rekognition</title>
+</head>
+
+<body>
+  <H1>Age Estimator</H1>
+  <input type="file" name="fileToUpload" id="fileToUpload" accept="image/*">
+  <p id="opResult"></p>
+</body>
+<script>
+
+  document.getElementById("fileToUpload").addEventListener("change", function (event) {
+    ProcessImage();
+  }, false);
+  
+  //Calls DetectFaces API and shows estimated ages of detected faces
+  function DetectFaces(imageData) {
+    AWS.region = 'AP_NORTHEAST_1';
+    var rekognition = new AWS.Rekognition();
+    var params = {
+      Image: {
+        Bytes: imageData
+      },
+      Attributes: [
+        'ALL',
+      ]
+    };
+    rekognition.detectFaces(params, function (err, data) {
+      if (err) console.log(err, err.stack); // an error occurred
+      else {
+       var table = "<table><tr><th>Low</th><th>High</th></tr>";
+        // show each face and build out estimated age table
+        for (var i = 0; i < data.FaceDetails.length; i++) {
+          table += '<tr><td>' + data.FaceDetails[i].AgeRange.Low +
+            '</td><td>' + data.FaceDetails[i].AgeRange.High + '</td></tr>';
+        }
+        table += "</table>";
+        document.getElementById("opResult").innerHTML = table;
+      }
+    });
+  }
+  //Loads selected image and unencodes image bytes for Rekognition DetectFaces API
+  function ProcessImage() {
+    AnonLog();
+    var control = document.getElementById("fileToUpload");
+    var file = control.files[0];
+
+    // Load base64 encoded image 
+    var reader = new FileReader();
+    reader.onload = (function (theFile) {
+      return function (e) {
+        var img = document.createElement('img');
+        var image = null;
+        img.src = e.target.result;
+        var jpg = true;
+        try {
+          image = atob(e.target.result.split("data:image/jpeg;base64,")[1]);
+
+        } catch (e) {
+          jpg = false;
+        }
+        if (jpg == false) {
+          try {
+            image = atob(e.target.result.split("data:image/png;base64,")[1]);
+          } catch (e) {
+            alert("Not an image file Rekognition can process");
+            return;
+          }
+        }
+        //unencode image bytes for Rekognition DetectFaces API 
+        var length = image.length;
+        imageBytes = new ArrayBuffer(length);
+        var ua = new Uint8Array(imageBytes);
+        for (var i = 0; i < length; i++) {
+          ua[i] = image.charCodeAt(i);
+        }
+        //Call Rekognition  
+        DetectFaces(imageBytes);
+      };
+    })(file);
+    reader.readAsDataURL(file);
+  }
+  //Provides anonymous log on to AWS services
+  function AnonLog() {
+    
+    // Configure the credentials provider to use your identity pool
+    AWS.config.region = 'AP_NORTHEAST_1'; // Region
+    AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+      IdentityPoolId: "ap-northeast-1:49591737-f08a-416d-9268-8dfe1c8e69d5",
+    });
+    // Make the call to obtain credentials
+    AWS.config.credentials.get(function () {
+      // Credentials will be available when this function is called.
+      var accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+      var secretAccessKey = process.env.AWS_SECRET_KEY;
+      //var sessionToken = ;
+    });
+  }
+
+  
+  
+</script>
+</html>
